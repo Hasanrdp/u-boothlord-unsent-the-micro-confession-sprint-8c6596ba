@@ -24,6 +24,29 @@ EXPECTED_BYTES = 139
 EXPECTED_SHA256 = "f1b33de4cab5796bc98cf169e02423f03fee834cb49a19fe22bafb1e787834eb"
 
 
+def verify(path, data) -> bool:
+    """Read the written file back and check it byte for byte against the pin."""
+    with open(path, "rb") as fh:
+        written = fh.read()
+    if written != data:
+        print(f"FAIL: {path} bytes differ from the pinned text", file=sys.stderr)
+        return False
+    if len(written) != EXPECTED_BYTES:
+        print(
+            f"FAIL: {path} is {len(written)} bytes, expected {EXPECTED_BYTES}",
+            file=sys.stderr,
+        )
+        return False
+    digest = hashlib.sha256(written).hexdigest()
+    if digest != EXPECTED_SHA256:
+        print(
+            f"FAIL: {path} sha256 {digest}, expected {EXPECTED_SHA256}",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def main() -> int:
     data = TEXT.encode("utf-8")
     if len(data) != EXPECTED_BYTES:
@@ -51,6 +74,10 @@ def main() -> int:
     path = os.path.join(outdir, "entry.txt")
     with open(path, "wb") as fh:
         fh.write(data)
+    verified = verify(path, data)
+    if not verified:
+        print(f"read-back verification failed for {path}", file=sys.stderr)
+        return 1
     print(f"wrote {path}: {len(data)} bytes, sha256 {digest}")
     return 0
 
